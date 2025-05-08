@@ -2,6 +2,7 @@ package org.chany.Controller;
 
 import org.chany.Model.Dto.ClienteDto;
 import org.chany.Model.Entity.Cliente;
+import org.chany.Model.payload.MensajeResponse;
 import org.chany.Service.ICliente;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -21,62 +22,101 @@ public class ClienteController {
     private ICliente clienteService;
 
     @PostMapping("cliente")
-    @ResponseStatus(HttpStatus.CREATED) //sirve para manejar el estado HTTP en este caso es un 201
-    public ClienteDto create(@RequestBody ClienteDto clienteDto) {
-        Cliente clienteSave = clienteService.save(clienteDto);
-        return ClienteDto.builder()
-                .idCliente(clienteSave.getIdCliente())
-                .nombre(clienteSave.getNombre())
-                .apellido(clienteSave.getApellido())
-                .correo(clienteSave.getCorreo())
-                .fechaRegistro((clienteSave.getFechaRegistro()))
-                .build();
-
-
+    //@ResponseStatus(HttpStatus.CREATED) //sirve para manejar el estado HTTP en este caso es un 201
+    public ResponseEntity<?> create(@RequestBody ClienteDto clienteDto) {
+        Cliente clienteSave = null;
+        try {
+         clienteSave = clienteService.save(clienteDto);
+            return new ResponseEntity<>(MensajeResponse.builder()
+                    .mensaje("Guardado correctamente")
+                    .object(ClienteDto.builder()
+                            .idCliente(clienteSave.getIdCliente())
+                            .nombre(clienteSave.getNombre())
+                            .apellido(clienteSave.getApellido())
+                            .correo(clienteSave.getCorreo())
+                            .fechaRegistro((clienteSave.getFechaRegistro()))
+                            .build())
+                    .build()
+                    , HttpStatus.CREATED );
+        }catch (DataAccessException exDt){
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje(exDt.getMessage())
+                            .object(null)
+                            .build(), HttpStatus.METHOD_NOT_ALLOWED);
+        }
     }
-    @PutMapping("cliente")
-    @ResponseStatus(HttpStatus.CREATED) //sirve para manejar el estado HTTP en este caso es un 201
-    public ClienteDto update(@RequestBody ClienteDto clienteDto) {
-        Cliente clienteUpdate = clienteService.save(clienteDto);
-        return ClienteDto.builder()
-                .idCliente(clienteUpdate.getIdCliente())
-                .nombre(clienteUpdate.getNombre())
-                .apellido(clienteUpdate.getApellido())
-                .correo(clienteUpdate.getCorreo())
-                .fechaRegistro((clienteUpdate.getFechaRegistro()))
-                .build();
+    @PutMapping("cliente/{id}")
+    public ResponseEntity<?> update(@RequestBody ClienteDto clienteDto, @PathVariable Integer id) {
+        Cliente clienteUpdate = null;
+        try {
+            Cliente findCliente = clienteService.findById(id);
+            if(findCliente != null){
+            clienteUpdate = clienteService.save(clienteDto);
+            return new ResponseEntity<>(MensajeResponse.builder()
+                    .mensaje("Guardado correctamente")
+                    .object(ClienteDto.builder()
+                            .idCliente(clienteUpdate.getIdCliente())
+                            .nombre(clienteUpdate.getNombre())
+                            .apellido(clienteUpdate.getApellido())
+                            .correo(clienteUpdate.getCorreo())
+                            .fechaRegistro((clienteUpdate.getFechaRegistro()))
+                            .build())
+                    .build()
+                    , HttpStatus.CREATED );
+            }else{
+                return new ResponseEntity<>(
+                        MensajeResponse.builder()
+                                .mensaje("El registro que intentan actualizar no se encuenttra en la Base de Datos.")
+                                .object(null)
+                                .build(), HttpStatus.NOT_FOUND);
+            }
+
+        }catch (DataAccessException exDt){
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje(exDt.getMessage())
+                            .object(null)
+                            .build(), HttpStatus.METHOD_NOT_ALLOWED);
+        }
     }
 
     @DeleteMapping("cliente/{id}")
-    //@ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<?> delete(@PathVariable Integer id) {
-        Map<String, Object> response = new HashMap<>();
+        //Map<String, Object> response = new HashMap<>();
         try{
             Cliente clienteDelete = clienteService.findById(id);
             clienteService.delete(clienteDelete);
             return new ResponseEntity<>(clienteDelete, HttpStatus.NO_CONTENT);
         }catch (DataAccessException exDt){
-            response.put("mensaje", exDt.getMessage());
-            response.put("cliente", null);
-            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                        .mensaje(exDt.getMessage())
+                        .object(null)
+                        .build(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
     @GetMapping("cliente/{id}")
-    @ResponseStatus(HttpStatus.OK) // status 200
-    public ResponseEntity<ClienteDto>  showById(@PathVariable Integer id){
+    public ResponseEntity<?>  showById(@PathVariable Integer id){
         Cliente cliente = clienteService.findById(id);
-        if (cliente != null) {
-            return ResponseEntity.ok(
-                ClienteDto.builder()
-                    .idCliente(cliente.getIdCliente())
-                    .nombre(cliente.getNombre())
-                    .apellido(cliente.getApellido())
-                    .correo(cliente.getCorreo())
-                    .fechaRegistro((cliente.getFechaRegistro()))
-                    .build()
-                    );
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+
+        if(cliente == null){
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje("El registro que intentas busacr, no existe!!")
+                            .object(null)
+                            .build(), HttpStatus.NOT_FOUND);
+        }else
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje("Exitosamente!!")
+                            .object(ClienteDto.builder()
+                                    .idCliente(cliente.getIdCliente())
+                                    .nombre(cliente.getNombre())
+                                    .apellido(cliente.getApellido())
+                                    .correo(cliente.getCorreo())
+                                    .fechaRegistro((cliente.getFechaRegistro()))
+                                    .build())
+                            .build(), HttpStatus.OK);
     }
 }
