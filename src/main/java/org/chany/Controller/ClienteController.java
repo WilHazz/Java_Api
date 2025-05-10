@@ -3,23 +3,45 @@ package org.chany.Controller;
 import org.chany.Model.Dto.ClienteDto;
 import org.chany.Model.Entity.Cliente;
 import org.chany.Model.payload.MensajeResponse;
-import org.chany.Service.ICliente;
+import org.chany.Service.IClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
 public class ClienteController {
 
     @Autowired
-    private ICliente clienteService;
+    private IClienteService clienteService;
+
+    @GetMapping("cliente/{id}")
+    public ResponseEntity<?>  showById(@PathVariable Integer id){
+        Cliente cliente = clienteService.findById(id);
+
+        if(cliente == null){
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje("El registro que intentas busacr, no existe!!")
+                            .object(null)
+                            .build(), HttpStatus.NOT_FOUND);
+        }else
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje("Exitosamente!!")
+                            .object(ClienteDto.builder()
+                                    .idCliente(cliente.getIdCliente())
+                                    .nombre(cliente.getNombre())
+                                    .apellido(cliente.getApellido())
+                                    .correo(cliente.getCorreo())
+                                    .fechaRegistro((cliente.getFechaRegistro()))
+                                    .build())
+                            .build(), HttpStatus.OK);
+    }
 
     @PostMapping("cliente")
     //@ResponseStatus(HttpStatus.CREATED) //sirve para manejar el estado HTTP en este caso es un 201
@@ -50,8 +72,8 @@ public class ClienteController {
     public ResponseEntity<?> update(@RequestBody ClienteDto clienteDto, @PathVariable Integer id) {
         Cliente clienteUpdate = null;
         try {
-            Cliente findCliente = clienteService.findById(id);
-            if(findCliente != null){
+            if(clienteService.existsById(id)){
+                clienteDto.setIdCliente(id);
             clienteUpdate = clienteService.save(clienteDto);
             return new ResponseEntity<>(MensajeResponse.builder()
                     .mensaje("Guardado correctamente")
@@ -96,27 +118,21 @@ public class ClienteController {
                         .build(), HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
-    @GetMapping("cliente/{id}")
-    public ResponseEntity<?>  showById(@PathVariable Integer id){
-        Cliente cliente = clienteService.findById(id);
+    @GetMapping("clientes")
+    public ResponseEntity<?>  showAll(){
+        List<Cliente> getList = clienteService.ListAll();
 
-        if(cliente == null){
+        if(getList == null){
             return new ResponseEntity<>(
                     MensajeResponse.builder()
-                            .mensaje("El registro que intentas busacr, no existe!!")
+                            .mensaje("No hay registros")
                             .object(null)
-                            .build(), HttpStatus.NOT_FOUND);
+                            .build(), HttpStatus.OK);
         }else
             return new ResponseEntity<>(
                     MensajeResponse.builder()
                             .mensaje("Exitosamente!!")
-                            .object(ClienteDto.builder()
-                                    .idCliente(cliente.getIdCliente())
-                                    .nombre(cliente.getNombre())
-                                    .apellido(cliente.getApellido())
-                                    .correo(cliente.getCorreo())
-                                    .fechaRegistro((cliente.getFechaRegistro()))
-                                    .build())
+                            .object(getList)
                             .build(), HttpStatus.OK);
     }
 }
